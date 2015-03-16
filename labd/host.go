@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"io"
 	"os/exec"
 
 	"golang.org/x/crypto/ssh"
@@ -71,20 +70,4 @@ func (h *Host) generateSSHConfig() error {
 	}
 
 	return nil
-}
-
-type Command struct {
-	StdinPipe  io.WriteCloser
-	StdoutPipe io.ReadCloser
-	StderrPipe io.ReadCloser
-	localCmd   *exec.Cmd
-	//remoteCmd
-}
-
-func (cmd *Command) Wait() error {
-	if cmd.localCmd != nil {
-		return cmd.localCmd.Wait()
-	}
-
-	return errors.New("Remote commands not yet implemented")
 }
