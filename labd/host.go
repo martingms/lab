@@ -17,12 +17,12 @@ type Host struct {
 func (h *Host) StartCmd(cmdStr string, args ...string) (*Command, error) {
 	if h.Host == "localhost" {
 		cmd, err := LocalCommand(cmdStr, args...)
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        return cmd, nil
-    }
+		return cmd, nil
+	}
 
 	if h.sshConf == nil {
 		err := h.generateSSHConfig()
@@ -31,7 +31,7 @@ func (h *Host) StartCmd(cmdStr string, args ...string) (*Command, error) {
 		}
 	}
 
-    return nil, errors.New("Remote commands not yet implemented")
+	return nil, errors.New("Remote commands not yet implemented")
 }
 
 func (h *Host) generateSSHConfig() error {

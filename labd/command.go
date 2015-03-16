@@ -36,10 +36,10 @@ func LocalCommand(cmdStr string, args ...string) (*Command, error) {
 	if err != nil {
 		return nil, err
 	}
-    err = localCmd.Start()
-    if err != nil {
-        return nil, err
-    }
+	err = localCmd.Start()
+	if err != nil {
+		return nil, err
+	}
 
 	return &Command{
 		StdinPipe:  stdin,
