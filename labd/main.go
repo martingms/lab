@@ -2,18 +2,21 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"log"
 )
 
 var (
 	configPath = flag.String("configPath", "labdrc.json", "The path to the JSON config file")
+    outputDir = flag.String("outputDir", "laboutput", "The directory in which to save job output")
 )
 
 func init() {
 	flag.Parse()
 }
+
+var (
+    jobs []*Job
+)
 
 func main() {
 	conf, err := ReadConfig(*configPath)
@@ -21,19 +24,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cmd, err := conf.Hosts[0].Run("uname", "-a")
+    newJobs, err := StartJobs(conf.Hosts, "uname", "-a")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	out, err := ioutil.ReadAll(cmd.StdoutPipe)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Print(string(out))
+    jobs = append(jobs, newJobs...)
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Fatal(err)
-	}
+    err = <-jobs[0].ch
+    if err != nil {
+        log.Fatal(err)
+    }
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"os/exec"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -15,10 +14,15 @@ type Host struct {
 	sshConf  *ssh.ClientConfig
 }
 
-func (h *Host) Run(cmd string, args ...string) (*Command, error) {
+func (h *Host) StartCmd(cmdStr string, args ...string) (*Command, error) {
 	if h.Host == "localhost" {
-		return h.runLocal(cmd, args...)
-	}
+		cmd, err := LocalCommand(cmdStr, args...)
+        if err != nil {
+            return nil, err
+        }
+
+        return cmd, nil
+    }
 
 	if h.sshConf == nil {
 		err := h.generateSSHConfig()
@@ -27,37 +31,7 @@ func (h *Host) Run(cmd string, args ...string) (*Command, error) {
 		}
 	}
 
-	return nil, errors.New("Remote commands not yet implemented")
-
-	// TODO: Check if we have connection, if not dial, etc.
-}
-
-func (h *Host) runLocal(cmd string, args ...string) (*Command, error) {
-	command := exec.Command(cmd, args...)
-	stdin, err := command.StdinPipe()
-	if err != nil {
-		return nil, err
-	}
-	stdout, err := command.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := command.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	err = command.Start()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Command{
-		StdinPipe:  stdin,
-		StdoutPipe: stdout,
-		StderrPipe: stderr,
-		localCmd:   command,
-	}, nil
+    return nil, errors.New("Remote commands not yet implemented")
 }
 
 func (h *Host) generateSSHConfig() error {

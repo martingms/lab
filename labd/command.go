@@ -1,22 +1,65 @@
+// This is an attempt to abstract away the differences between
+// crypto/ssh#Session and os/exec#Command
+
+// TODO: When crypto/ssh#Session and os/exec#Command has same method signature,
+// refactor this away, using an interface. (Or when io.ReadCloser passes as a
+// io.Reader).
+// PS: Might very well be a better way to do this, 'cause this is ugly...
+
 package main
 
 import (
-    "os/exec"
-    "io"
-    "errors"
+	"errors"
+	"io"
+	"os/exec"
 )
 
 type Command struct {
 	StdinPipe  io.WriteCloser
-	StdoutPipe io.ReadCloser
-	StderrPipe io.ReadCloser
+	StdoutPipe io.Reader
+	StderrPipe io.Reader
 	localCmd   *exec.Cmd
 	//remoteCmd
+}
+
+func LocalCommand(cmdStr string, args ...string) (*Command, error) {
+	localCmd := exec.Command(cmdStr, args...)
+	stdin, err := localCmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := localCmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderr, err := localCmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+    err = localCmd.Start()
+    if err != nil {
+        return nil, err
+    }
+
+	return &Command{
+		StdinPipe:  stdin,
+		StdoutPipe: stdout,
+		StderrPipe: stderr,
+		localCmd:   localCmd,
+	}, nil
 }
 
 func (cmd *Command) Wait() error {
 	if cmd.localCmd != nil {
 		return cmd.localCmd.Wait()
+	}
+
+	return errors.New("Remote commands not yet implemented")
+}
+
+func (cmd *Command) Start() error {
+	if cmd.localCmd != nil {
+		return cmd.localCmd.Start()
 	}
 
 	return errors.New("Remote commands not yet implemented")
