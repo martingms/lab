@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(out))
+	fmt.Print(string(out))
 
 	err = cmd.Wait()
 	if err != nil {
