@@ -15,7 +15,7 @@ type Host struct {
 }
 
 func (h *Host) StartCmd(cmdStr string, args ...string) (*Command, error) {
-	if h.Host == "localhost" {
+	if h.Host == "localhost" && h.Username == "" {
 		cmd, err := LocalCommand(cmdStr, args...)
 		if err != nil {
 			return nil, err
