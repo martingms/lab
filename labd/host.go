@@ -17,7 +17,7 @@ type Host struct {
 }
 
 func (h *Host) Run(cmd string, args ...string) (*Command, error) {
-	if h.Name == "localhost" {
+	if h.Host == "localhost" {
 		return h.runLocal(cmd, args...)
 	}
 
