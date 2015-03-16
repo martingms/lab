@@ -14,6 +14,7 @@ func ReadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	conf := Config{}
