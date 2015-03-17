@@ -9,9 +9,11 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"os/exec"
+	"strings"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type Command struct {
@@ -19,10 +21,10 @@ type Command struct {
 	StdoutPipe io.Reader
 	StderrPipe io.Reader
 	localCmd   *exec.Cmd
-	//remoteCmd
+	sshSession *ssh.Session
 }
 
-func LocalCommand(cmdStr string, args ...string) (*Command, error) {
+func StartLocalCommand(cmdStr string, args ...string) (*Command, error) {
 	localCmd := exec.Command(cmdStr, args...)
 	stdin, err := localCmd.StdinPipe()
 	if err != nil {
@@ -49,12 +51,39 @@ func LocalCommand(cmdStr string, args ...string) (*Command, error) {
 	}, nil
 }
 
+func StartSSHCommand(session *ssh.Session, cmdStr string, args ...string) (*Command, error) {
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	err = session.Start(cmdStr + " " + strings.Join(args, " "))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Command{
+		StdinPipe:  stdin,
+		StdoutPipe: stdout,
+		StderrPipe: stderr,
+		sshSession: session,
+	}, nil
+}
+
 func (cmd *Command) Wait() error {
 	if cmd.localCmd != nil {
 		return cmd.localCmd.Wait()
 	}
 
-	return errors.New("Remote commands not yet implemented")
+	return cmd.sshSession.Wait()
 }
 
 func (cmd *Command) Start() error {
