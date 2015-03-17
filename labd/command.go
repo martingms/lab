@@ -85,11 +85,3 @@ func (cmd *Command) Wait() error {
 
 	return cmd.sshSession.Wait()
 }
-
-func (cmd *Command) Start() error {
-	if cmd.localCmd != nil {
-		return cmd.localCmd.Start()
-	}
-
-	return errors.New("Remote commands not yet implemented")
-}
