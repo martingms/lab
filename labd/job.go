@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type Job struct {
@@ -32,8 +34,14 @@ func StartJobs(hosts []*Host, cmdStr string, args ...string) ([]*Job, error) {
 			log.Println("unable to generate UUID for job:", err)
 		}
 
-		job := &Job{ID: jobId, CmdStr: cmdStr + strings.Join(args, " "), Status: "Running", cmd: cmd}
-		job.handleJob()
+		job := &Job{
+			ID:     jobId,
+			CmdStr: cmdStr + " " + strings.Join(args, " "),
+			Status: "Running",
+			cmd:    cmd,
+			ch:     make(chan error),
+		}
+		go job.handleJob()
 
 		jobs = append(jobs, job)
 	}
@@ -46,17 +54,40 @@ func StartJobs(hosts []*Host, cmdStr string, args ...string) ([]*Job, error) {
 }
 
 func (job *Job) handleJob() {
-	job.ch = make(chan error)
+	stdoutFile, err := os.Create(filepath.Join(*outputDir, job.ID+".stdout"))
+	if err != nil {
+		job.ch <- err
+		return
+	}
+	defer stdoutFile.Close()
 
-	go func() {
-		b, err := ioutil.ReadAll(job.cmd.StdoutPipe)
+	stderrFile, err := os.Create(filepath.Join(*outputDir, job.ID+".stderr"))
+	if err != nil {
+		job.ch <- err
+		return
+	}
+	defer stderrFile.Close()
+
+	var wg sync.WaitGroup
+	writeStream := func(file *os.File) {
+		n, err := io.Copy(file, job.cmd.StdoutPipe)
 		if err != nil {
-			job.ch <- err
-			return
+			log.Println("some error in writing", file.Name()+":", err)
+		}
+		if n == 0 {
+			os.Remove(file.Name())
+		} else {
+			log.Println(n, "bytes written to", file.Name())
 		}
 
-		fmt.Println(string(b))
+		wg.Done()
+	}
 
-		job.ch <- job.cmd.Wait()
-	}()
+	wg.Add(2)
+	go writeStream(stdoutFile)
+	go writeStream(stderrFile)
+
+	wg.Wait()
+
+	job.ch <- job.cmd.Wait()
 }
