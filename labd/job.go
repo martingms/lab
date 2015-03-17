@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"log"
 	"os"
@@ -19,38 +18,31 @@ type Job struct {
 }
 
 // TODO: Run same command n times on same host, etcetera.
-func StartJobs(hosts []*Host, cmdStr string, args ...string) ([]*Job, error) {
-	jobs := []*Job{}
-	for _, host := range hosts {
-		cmd, err := host.StartCmd(cmdStr, args...)
-		if err != nil {
-			log.Println("unable to start command:", cmdStr, strings.Join(args, " "), "on host:", host.Name, ":", err)
-			continue
-		}
-		log.Println("successfully started command:", cmdStr, strings.Join(args, " "), "on host:", host.Name)
+func StartJobs(jobChan chan *Job, hosts []*Host, cmdStr string, args ...string) {
+	for _, h := range hosts {
+		go func(host *Host) {
+			cmd, err := host.StartCmd(cmdStr, args...)
+			if err != nil {
+				log.Println("unable to start command:", cmdStr, strings.Join(args, " "), "on host:", host.Name, ":", err)
+				return
+			}
 
-		jobId, err := GenUUID()
-		if err != nil {
-			log.Println("unable to generate UUID for job:", err)
-		}
+			jobId, err := GenUUID()
+			if err != nil {
+				log.Println("unable to generate UUID for job:", err)
+			}
 
-		job := &Job{
-			ID:     jobId,
-			CmdStr: cmdStr + " " + strings.Join(args, " "),
-			Status: "Running",
-			cmd:    cmd,
-			ch:     make(chan error),
-		}
-		go job.handleJob()
-
-		jobs = append(jobs, job)
+			job := &Job{
+				ID:     jobId,
+				CmdStr: cmdStr + " " + strings.Join(args, " "),
+				Status: "Running",
+				cmd:    cmd,
+				ch:     make(chan error),
+			}
+			go job.handleJob()
+			jobChan <- job
+		}(h)
 	}
-
-	if len(jobs) == 0 {
-		return nil, errors.New("no jobs started, either all failed or no hosts")
-	}
-
-	return jobs, nil
 }
 
 func (job *Job) handleJob() {
